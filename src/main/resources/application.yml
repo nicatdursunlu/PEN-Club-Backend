@@ -3,9 +3,9 @@ spring:
     name: pen-club-backend
 
   datasource:
-    url: ${DATABASE_URL}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: jdbc:postgresql://${HOST}:${PORT}/${DATABASE}?sslmode=require
+    username: ${USER}
+    password: ${PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
