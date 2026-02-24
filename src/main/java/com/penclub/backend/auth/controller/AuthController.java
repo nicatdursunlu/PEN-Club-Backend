@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,6 +50,29 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("Registration request received for email: {}", request.getEmail());
         AuthResponse response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * POST /api/v1/auth/admin/register
+     */
+    @Operation(
+            summary = "Register a new admin user",
+            description = "Creates a new user account with ADMIN role. Requires an existing ADMIN Bearer token.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Admin registered successfully",
+                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Access denied — ADMIN role required", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Email already in use", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Validation error (missing/invalid fields)", content = @Content)
+    })
+    @PostMapping("/admin/register")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
+        log.info("Admin registration request received for email: {}", request.getEmail());
+        AuthResponse response = authService.registerAdmin(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

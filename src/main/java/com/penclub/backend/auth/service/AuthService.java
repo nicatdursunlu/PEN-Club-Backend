@@ -36,6 +36,22 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        return registerWithRole(request, Role.MEMBER);
+    }
+
+    /**
+     * Registers a new user with the ADMIN role.
+     * Only callable by an existing ADMIN (enforced at controller level via @PreAuthorize).
+     */
+    @Transactional
+    public AuthResponse registerAdmin(RegisterRequest request) {
+        return registerWithRole(request, Role.ADMIN);
+    }
+
+    /**
+     * Shared registration logic for any role.
+     */
+    private AuthResponse registerWithRole(RegisterRequest request, Role role) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException(
                     "User with email '" + request.getEmail() + "' already exists"
@@ -47,12 +63,12 @@ public class AuthService {
                 .lastName(request.getLastName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.MEMBER)
+                .role(role)
                 .enabled(true)
                 .build();
 
         User savedUser = userRepository.save(user);
-        log.info("New user registered: {}", savedUser.getEmail());
+        log.info("New {} registered: {}", role.name(), savedUser.getEmail());
 
         String accessToken = jwtService.generateToken(savedUser);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);

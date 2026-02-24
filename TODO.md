@@ -18,6 +18,14 @@
 - [x] 13. Update EventService.getAllEvents() to return List<EventSummaryDto>
 - [x] 14. Update EventController.getAllEvents() to return List<EventSummaryDto>
 
+## Admin User
+- [x] 15. Add existsByRole(Role) to UserRepository
+- [x] 16. Create AdminUserInitializer — seed admin on startup from env vars (idempotent)
+- [x] 17. Update application.yml — add admin credential env var placeholders
+- [x] 18. Add registerAdmin() to AuthService (ADMIN role)
+- [x] 19. Add POST /auth/admin/register endpoint (requires ADMIN role)
+- [x] 20. Update SecurityConfig — @EnableMethodSecurity already active, /auth/admin/register not in PUBLIC_ENDPOINTS
+
 ## Upcoming & Past Events Endpoints
 - [x] 15. Add getUpcomingEvents() and getPastEvents() to EventService with date parsing + EventStatus fallback
 - [x] 16. Add GET /events/upcoming and GET /events/past to EventController
