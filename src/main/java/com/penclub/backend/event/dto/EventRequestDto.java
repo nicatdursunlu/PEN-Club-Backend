@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -17,7 +18,7 @@ import java.util.List;
 public class EventRequestDto {
     private String slug;
     private String title;
-    private String date;
+    private LocalDate date;
     private String time;
     private String location;
     private EventCategory category;

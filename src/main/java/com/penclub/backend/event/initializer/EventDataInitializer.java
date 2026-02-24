@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -49,7 +50,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("🏐 PEN Club Volleyball Day 🏐")
-                .date("February 21, 2026")
+                .date(LocalDate.of(2026, 2, 21))
                 .time("6:30 PM - 7:30 PM")
                 .location("Camp4 Climbing Hall, Warsaw")
                 .category(EventCategory.PLAY)
@@ -98,7 +99,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("Job Networking & Support Meetup")
-                .date("February 15, 2026")
+                .date(LocalDate.of(2026, 2, 15))
                 .time("12:00 PM - 2:00 PM")
                 .location("Green Caffè Nero, Warsaw, Poland")
                 .category(EventCategory.NETWORK)
@@ -183,7 +184,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("Football Tournament")
-                .date("March 15, 2026")
+                .date(LocalDate.of(2026, 3, 15))
                 .time("3:00 PM - 6:00 PM")
                 .location("City Sports Complex")
                 .category(EventCategory.PLAY)
@@ -219,7 +220,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("Mafia Night")
-                .date("March 22, 2026")
+                .date(LocalDate.of(2026, 3, 22))
                 .time("7:00 PM - 11:00 PM")
                 .location("Community Center")
                 .category(EventCategory.ENJOY)
@@ -255,7 +256,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("Summer Picnic & Games Festival")
-                .date("August 16, 2025")
+                .date(LocalDate.of(2025, 8, 16))
                 .time("12:00 PM - 6:00 PM")
                 .location("Outdoor Park, Warsaw")
                 .category(EventCategory.ENJOY)
@@ -318,7 +319,7 @@ public class EventDataInitializer implements CommandLineRunner {
         Event event = Event.builder()
                 .slug(slug)
                 .title("Outdoor Volleyball - Last Summer Games")
-                .date("September 12, 2025")
+                .date(LocalDate.of(2025, 9, 12))
                 .time("5:00 PM - 7:00 PM")
                 .location("Volleyball Court, Warsaw")
                 .category(EventCategory.PLAY)

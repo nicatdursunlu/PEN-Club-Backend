@@ -26,8 +26,6 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class EventService {
 
-    private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
     private static final DateTimeFormatter TIME_FORMATTER =
             DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
@@ -41,64 +39,69 @@ public class EventService {
     }
 
     public List<EventSummaryDto> getUpcomingEvents() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         return eventRepository.findAll()
                 .stream()
-                .filter(event -> isUpcoming(event, now))
-                .sorted(Comparator.comparing(event -> parseEventEndDateTime(event, now)))
+                .filter(event -> isUpcoming(event, today))
+                .sorted(Comparator.comparing(event -> resolveEndDateTime(event)))
                 .map(EventSummaryDto::fromEntity)
                 .toList();
     }
 
     public List<EventSummaryDto> getPastEvents() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         return eventRepository.findAll()
                 .stream()
-                .filter(event -> !isUpcoming(event, now))
-                .sorted(Comparator.comparing((Event event) -> parseEventEndDateTime(event, now)).reversed())
+                .filter(event -> !isUpcoming(event, today))
+                .sorted(Comparator.comparing((Event event) -> resolveEndDateTime(event)).reversed())
                 .map(EventSummaryDto::fromEntity)
                 .toList();
     }
 
     /**
-     * Determines if an event is upcoming based on parsed date+time.
-     * Falls back to EventStatus if parsing fails.
+     * Determines if an event is upcoming.
+     * An event is upcoming if its date is today or in the future.
+     * If the date is today, checks the end time to see if the event has already ended.
      */
-    private boolean isUpcoming(Event event, LocalDateTime now) {
-        try {
-            LocalDateTime endDateTime = parseEventEndDateTime(event, now);
-            return endDateTime.isAfter(now);
-        } catch (Exception e) {
-            log.warn("Could not parse date/time for event '{}', falling back to EventStatus", event.getSlug());
+    private boolean isUpcoming(Event event, LocalDate today) {
+        if (event.getDate() == null) {
             return event.getStatus() == EventStatus.UPCOMING;
         }
+        LocalDate eventDate = event.getDate();
+        if (eventDate.isAfter(today)) {
+            return true;
+        }
+        if (eventDate.isBefore(today)) {
+            return false;
+        }
+        // Same day — check end time
+        LocalDateTime now = LocalDateTime.now();
+        return resolveEndDateTime(event).isAfter(now);
     }
 
     /**
-     * Parses the event's date and end time into a LocalDateTime.
-     * Time format: "3:00 PM - 6:00 PM" → takes the end part "6:00 PM".
-     * Falls back to end-of-day (23:59) if time is null or unparseable.
+     * Resolves the event's end date+time as a LocalDateTime for sorting.
+     * Uses the end part of the time range (e.g. "3:00 PM - 6:00 PM" → 6:00 PM).
+     * Falls back to end-of-day if time is null or unparseable.
      */
-    private LocalDateTime parseEventEndDateTime(Event event, LocalDateTime fallback) {
-        try {
-            LocalDate date = LocalDate.parse(event.getDate().trim(), DATE_FORMATTER);
-            LocalTime endTime = LocalTime.MAX;
+    private LocalDateTime resolveEndDateTime(Event event) {
+        LocalDate date = event.getDate() != null ? event.getDate() : LocalDate.now();
+        LocalTime endTime = LocalTime.MAX;
 
-            if (event.getTime() != null && !event.getTime().isBlank()) {
+        if (event.getTime() != null && !event.getTime().isBlank()) {
+            try {
                 String timeStr = event.getTime().trim();
                 // Extract end time from "3:00 PM - 6:00 PM" → "6:00 PM"
                 String endPart = timeStr.contains("-")
                         ? timeStr.substring(timeStr.lastIndexOf('-') + 1).trim()
                         : timeStr.trim();
                 endTime = LocalTime.parse(endPart, TIME_FORMATTER);
+            } catch (Exception e) {
+                log.warn("Could not parse time for event '{}': time='{}'", event.getSlug(), event.getTime());
             }
-
-            return LocalDateTime.of(date, endTime);
-        } catch (Exception e) {
-            log.warn("Failed to parse date/time for event '{}': date='{}', time='{}'",
-                    event.getSlug(), event.getDate(), event.getTime());
-            return fallback;
         }
+
+        return LocalDateTime.of(date, endTime);
     }
 
     public EventResponseDto getEventBySlug(String slug) {

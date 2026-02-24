@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -21,7 +22,7 @@ public class EventResponseDto {
     private UUID id;
     private String slug;
     private String title;
-    private String date;
+    private LocalDate date;
     private String time;
     private String location;
     private EventCategory category;

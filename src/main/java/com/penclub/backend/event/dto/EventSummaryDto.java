@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,7 +17,7 @@ public class EventSummaryDto {
 
     private String id;
     private String title;
-    private String date;
+    private LocalDate date;
     private String time;
     private String location;
     private String description;

@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -29,8 +30,8 @@ public class Event {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "date", nullable = false)
-    private String date;
+    @Column(name = "date", nullable = false, columnDefinition = "DATE")
+    private LocalDate date;
 
     @Column(name = "time")
     private String time;
@@ -39,11 +40,11 @@ public class Event {
     private String location;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false)
+    @Column(name = "category", nullable = false, columnDefinition = "VARCHAR(255)")
     private EventCategory category;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(255)")
     private EventStatus status;
 
     @Column(name = "description", columnDefinition = "TEXT")
