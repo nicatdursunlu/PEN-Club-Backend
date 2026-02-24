@@ -5,6 +5,7 @@ import com.penclub.backend.auth.dto.LoginRequest;
 import com.penclub.backend.auth.dto.RefreshTokenRequest;
 import com.penclub.backend.auth.dto.RegisterRequest;
 import com.penclub.backend.auth.service.AuthService;
+import com.penclub.backend.user.dto.UserDto;
 import com.penclub.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -142,19 +143,12 @@ public class AuthController {
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "User profile returned successfully", content = @Content),
+            @ApiResponse(responseCode = "200", description = "User profile returned successfully",
+                    content = @Content(schema = @Schema(implementation = UserDto.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized — missing or invalid Bearer token", content = @Content)
     })
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> getCurrentUser(@AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(Map.of(
-                "id", currentUser.getId(),
-                "email", currentUser.getEmail(),
-                "first_name", currentUser.getFirstName(),
-                "last_name", currentUser.getLastName(),
-                "role", currentUser.getRole().name(),
-                "enabled", currentUser.isEnabled(),
-                "created_at", currentUser.getCreatedAt()
-        ));
+    public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(UserDto.fromEntity(currentUser));
     }
 }
