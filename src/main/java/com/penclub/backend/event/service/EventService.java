@@ -119,7 +119,7 @@ public class EventService {
                 .date(request.getDate())
                 .time(request.getTime())
                 .location(request.getLocation())
-                .category(request.getCategory() != null ? request.getCategory() : EventCategory.SOCIAL)
+                .category(request.getCategory() != null ? request.getCategory() : EventCategory.ENJOY)
                 .status(request.getStatus() != null ? request.getStatus() : EventStatus.UPCOMING)
                 .description(request.getDescription())
                 .fullDescription(request.getFullDescription())

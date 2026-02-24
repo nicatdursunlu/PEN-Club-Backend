@@ -26,6 +26,13 @@
 - [x] 19. Add POST /auth/admin/register endpoint (requires ADMIN role)
 - [x] 20. Update SecurityConfig — @EnableMethodSecurity already active, /auth/admin/register not in PUBLIC_ENDPOINTS
 
+## Dashboard API (ADMIN only)
+- [x] 21. Add countByRole(Role) to UserRepository
+- [x] 22. Create DashboardResponseDto
+- [x] 23. Create DashboardService
+- [x] 24. Create DashboardController — GET /dashboard (ADMIN only)
+- [x] 25. Update SecurityConfig — protect /dashboard/** with ADMIN role
+
 ## Upcoming & Past Events Endpoints
 - [x] 15. Add getUpcomingEvents() and getPastEvents() to EventService with date parsing + EventStatus fallback
 - [x] 16. Add GET /events/upcoming and GET /events/past to EventController

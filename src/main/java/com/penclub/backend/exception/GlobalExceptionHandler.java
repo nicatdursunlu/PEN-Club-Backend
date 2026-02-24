@@ -1,8 +1,10 @@
 package com.penclub.backend.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.validation.FieldError;
@@ -11,8 +13,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
@@ -37,6 +41,33 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // --- Invalid Request Body (e.g. invalid enum value) ---
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        String message = "Invalid request body";
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null && ife.getTargetType().isEnum()) {
+            String validValues = Arrays.stream(ife.getTargetType().getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            message = String.format(
+                    "Invalid value '%s' for field '%s'. Accepted values are: [%s]",
+                    ife.getValue(),
+                    ife.getPath().isEmpty() ? "unknown" : ife.getPath().get(ife.getPath().size() - 1).getFieldName(),
+                    validValues
+            );
+        }
+        log.warn("Invalid request body: {}", message);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", message);
+    }
+
+    // --- Illegal Argument (e.g. duplicate slug) ---
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Illegal argument: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
     }
 
     // --- User Already Exists ---

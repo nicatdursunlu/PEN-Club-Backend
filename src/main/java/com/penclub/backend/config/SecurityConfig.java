@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         // Events: GET endpoints are public, write operations require authentication
                         .requestMatchers(HttpMethod.GET, "/events/**").permitAll()
+                        // Dashboard: ADMIN only
+                        .requestMatchers("/dashboard/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
 
