@@ -23,7 +23,7 @@ server:
     context-path: /api/v1
 
 cors:
-  allowed-origins: http://localhost:3000
+  allowed-origin-patterns: "*"
 
 application:
   security:
