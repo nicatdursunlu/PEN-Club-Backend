@@ -20,6 +20,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,39 +38,25 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        return registerWithRole(request, Role.MEMBER);
-    }
+        String normalizedEmail = normalizeEmail(request.getEmail());
 
-    /**
-     * Registers a new user with the ADMIN role.
-     * Only callable by an existing ADMIN (enforced at controller level via @PreAuthorize).
-     */
-    @Transactional
-    public AuthResponse registerAdmin(RegisterRequest request) {
-        return registerWithRole(request, Role.ADMIN);
-    }
-
-    /**
-     * Shared registration logic for any role.
-     */
-    private AuthResponse registerWithRole(RegisterRequest request, Role role) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new UserAlreadyExistsException(
-                    "User with email '" + request.getEmail() + "' already exists"
+                    "User with email '" + normalizedEmail + "' already exists"
             );
         }
 
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .email(request.getEmail())
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(role)
+                .role(Role.MEMBER)
                 .enabled(true)
                 .build();
 
         User savedUser = userRepository.save(user);
-        log.info("New {} registered: {}", role.name(), savedUser.getEmail());
+        log.info("New MEMBER registered: {}", savedUser.getEmail());
 
         String accessToken = jwtService.generateToken(savedUser);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(savedUser);
@@ -81,9 +69,11 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
+                        normalizedEmail,
                         request.getPassword()
                 )
         );
@@ -122,6 +112,10 @@ public class AuthService {
 
     // --- Helper ---
 
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -131,6 +125,9 @@ public class AuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .gender(user.getGender())
+                .phoneNumber(user.getPhoneNumber())
+                .educationDegree(user.getEducationDegree())
                 .role(user.getRole().name())
                 .build();
     }

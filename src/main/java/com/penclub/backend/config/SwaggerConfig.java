@@ -40,7 +40,7 @@ public class SwaggerConfig {
                         ## Authentication
                         This API uses **JWT Bearer tokens** for authentication.
                         
-                        1. Register a new account via `POST /auth/register`
+                        1. Register a member account via `POST /auth/register`
                         2. Login via `POST /auth/login` to receive an `access_token` and `refresh_token`
                         3. Click the **Authorize** button above and enter: `Bearer <your_access_token>`
                         4. All protected endpoints will now be accessible

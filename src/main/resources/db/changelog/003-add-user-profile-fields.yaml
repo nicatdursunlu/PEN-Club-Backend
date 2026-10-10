@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-user-profile-fields
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          columnExists:
+            tableName: users
+            columnName: gender
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: gender
+                  type: VARCHAR(50)
+              - column:
+                  name: phone_number
+                  type: VARCHAR(30)
+              - column:
+                  name: education_degree
+                  type: VARCHAR(100)

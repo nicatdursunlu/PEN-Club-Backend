@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -112,12 +113,13 @@ public class EventService {
 
     @Transactional
     public EventResponseDto createEvent(EventRequestDto request) {
-        if (eventRepository.existsBySlug(request.getSlug())) {
-            throw new IllegalArgumentException("Event with slug '" + request.getSlug() + "' already exists");
+        String slug = resolveSlug(request);
+        if (eventRepository.existsBySlug(slug)) {
+            throw new IllegalArgumentException("Event with slug '" + slug + "' already exists");
         }
 
         Event event = Event.builder()
-                .slug(request.getSlug())
+                .slug(slug)
                 .title(request.getTitle())
                 .date(request.getDate())
                 .time(request.getTime())
@@ -140,6 +142,38 @@ public class EventService {
                 .build();
 
         return EventResponseDto.fromEntity(eventRepository.save(event));
+    }
+
+    private String resolveSlug(EventRequestDto request) {
+        if (request.getSlug() != null && !request.getSlug().isBlank()) {
+            return request.getSlug().trim();
+        }
+
+        String baseSlug = slugify(request.getTitle());
+        String slug = baseSlug;
+        int suffix = 2;
+        while (eventRepository.existsBySlug(slug)) {
+            slug = baseSlug + "-" + suffix;
+            suffix++;
+        }
+        return slug;
+    }
+
+    private String slugify(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Event title is required to generate slug");
+        }
+
+        String slug = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ENGLISH)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+
+        if (slug.isBlank()) {
+            throw new IllegalArgumentException("Event title must contain letters or numbers to generate slug");
+        }
+        return slug;
     }
 
     @Transactional

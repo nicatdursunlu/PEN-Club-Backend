@@ -19,6 +19,9 @@ public class UserDto {
     private String email;
     private String firstName;
     private String lastName;
+    private String gender;
+    private String phoneNumber;
+    private String educationDegree;
     private String role;
     private boolean enabled;
     private LocalDateTime createdAt;
@@ -32,6 +35,9 @@ public class UserDto {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .gender(user.getGender())
+                .phoneNumber(user.getPhoneNumber())
+                .educationDegree(user.getEducationDegree())
                 .role(user.getRole().name())
                 .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())

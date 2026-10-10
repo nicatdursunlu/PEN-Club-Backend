@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/001-create-initial-schema.yaml
   - include:
       file: db/changelog/002-seed-events.yaml
+  - include:
+      file: db/changelog/003-add-user-profile-fields.yaml
