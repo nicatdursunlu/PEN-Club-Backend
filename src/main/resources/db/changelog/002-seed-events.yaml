@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-replace-seed-events
+      author: codex
+      changes:
+        - sql:
+            sql: ALTER TABLE events DROP CONSTRAINT IF EXISTS events_category_check
+        - sqlFile:
+            path: db/changelog/sql/002-seed-events.sql
+            splitStatements: true
+            stripComments: true

@@ -3,19 +3,22 @@ spring:
     name: pen-club-backend
 
   datasource:
-    url: jdbc:postgresql://${HOST}:${DB_PORT}/${DATABASE}?sslmode=require
-    username: ${USER}
-    password: ${PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pen-club}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
 server:
   port: ${PORT:8080}
