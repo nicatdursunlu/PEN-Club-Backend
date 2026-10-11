@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-event-participant-soft-delete-fields
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        and:
+          - tableExists:
+              tableName: event_participants
+          - not:
+              columnExists:
+                tableName: event_participants
+                columnName: registered
+      changes:
+        - addColumn:
+            tableName: event_participants
+            columns:
+              - column:
+                  name: registered
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unregistered_at
+                  type: TIMESTAMP
