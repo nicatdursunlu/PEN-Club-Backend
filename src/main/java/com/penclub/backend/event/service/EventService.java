@@ -1,13 +1,18 @@
 package com.penclub.backend.event.service;
 
 import com.penclub.backend.event.dto.EventRequestDto;
+import com.penclub.backend.event.dto.EventParticipantDto;
 import com.penclub.backend.event.dto.EventResponseDto;
 import com.penclub.backend.event.dto.EventSummaryDto;
 import com.penclub.backend.event.entity.Event;
+import com.penclub.backend.event.entity.EventParticipant;
 import com.penclub.backend.event.entity.EventCategory;
 import com.penclub.backend.event.entity.EventStatus;
+import com.penclub.backend.event.repository.EventParticipantRepository;
 import com.penclub.backend.event.repository.EventRepository;
+import com.penclub.backend.exception.EventAlreadyRegisteredException;
 import com.penclub.backend.exception.ResourceNotFoundException;
+import com.penclub.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +36,7 @@ public class EventService {
             DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
 
     private final EventRepository eventRepository;
+    private final EventParticipantRepository eventParticipantRepository;
 
     public List<EventSummaryDto> getAllEvents() {
         return eventRepository.findAll()
@@ -109,6 +115,75 @@ public class EventService {
         Event event = eventRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
         return EventResponseDto.fromEntity(event);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventParticipantDto> getEventParticipants(String slug) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        return eventParticipantRepository.findAllByEventOrderByCreatedAtAsc(event)
+                .stream()
+                .map(EventParticipantDto::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public EventResponseDto registerForEvent(String slug, User currentUser) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        validateEventIsUpcoming(event, slug, "register for");
+
+        if (eventParticipantRepository.existsByEventAndUserAndRegisteredTrue(event, currentUser)) {
+            throw new EventAlreadyRegisteredException(
+                    "User is already registered for event: " + slug
+            );
+        }
+
+        EventParticipant participant = eventParticipantRepository.findByEventAndUser(event, currentUser)
+                .orElseGet(() -> EventParticipant.builder()
+                        .event(event)
+                        .user(currentUser)
+                        .build());
+        participant.setRegistered(true);
+        participant.setUnregisteredAt(null);
+        eventParticipantRepository.save(participant);
+
+        int attendees = event.getAttendees() != null ? event.getAttendees() : 0;
+        event.setAttendees(attendees + 1);
+
+        log.info("User '{}' registered for event '{}'", currentUser.getEmail(), slug);
+        return EventResponseDto.fromEntity(eventRepository.save(event));
+    }
+
+    @Transactional
+    public EventResponseDto unregisterFromEvent(String slug, User currentUser) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        validateEventIsUpcoming(event, slug, "unregister from");
+
+        EventParticipant participant = eventParticipantRepository.findByEventAndUserAndRegisteredTrue(event, currentUser)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Event registration not found for event: " + slug
+                ));
+
+        participant.setRegistered(false);
+        participant.setUnregisteredAt(LocalDateTime.now());
+        eventParticipantRepository.save(participant);
+
+        int attendees = event.getAttendees() != null ? event.getAttendees() : 0;
+        event.setAttendees(Math.max(0, attendees - 1));
+
+        log.info("User '{}' unregistered from event '{}'", currentUser.getEmail(), slug);
+        return EventResponseDto.fromEntity(eventRepository.save(event));
+    }
+
+    private void validateEventIsUpcoming(Event event, String slug, String action) {
+        if (!isUpcoming(event, LocalDate.now())) {
+            throw new IllegalArgumentException("Cannot " + action + " a past event: " + slug);
+        }
     }
 
     @Transactional

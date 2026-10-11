@@ -77,6 +77,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
     }
 
+    // --- Event Already Registered ---
+    @ExceptionHandler(EventAlreadyRegisteredException.class)
+    public ResponseEntity<ErrorResponse> handleEventAlreadyRegistered(EventAlreadyRegisteredException ex) {
+        log.warn("Event registration already exists: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
+    }
+
     // --- Token Refresh Error ---
     @ExceptionHandler(TokenRefreshException.class)
     public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException ex) {

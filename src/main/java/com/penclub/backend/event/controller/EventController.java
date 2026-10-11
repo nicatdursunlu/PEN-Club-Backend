@@ -1,14 +1,19 @@
 package com.penclub.backend.event.controller;
 
 import com.penclub.backend.event.dto.EventRequestDto;
+import com.penclub.backend.event.dto.EventParticipantDto;
 import com.penclub.backend.event.dto.EventResponseDto;
 import com.penclub.backend.event.dto.EventSummaryDto;
 import com.penclub.backend.event.service.EventService;
+import com.penclub.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,6 +48,43 @@ public class EventController {
     @Operation(summary = "Get event by slug", description = "Retrieves an event by its unique slug")
     public ResponseEntity<EventResponseDto> getEventBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(eventService.getEventBySlug(slug));
+    }
+
+    @GetMapping("/{slug}/participants")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Get event participants",
+            description = "Returns all participant records for an event, including users who unregistered and their unregistration timestamp. Requires ADMIN role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<List<EventParticipantDto>> getEventParticipants(@PathVariable String slug) {
+        return ResponseEntity.ok(eventService.getEventParticipants(slug));
+    }
+
+    @PostMapping("/{slug}/register")
+    @Operation(
+            summary = "Register current user for an event",
+            description = "Registers the authenticated user for the event and increments attendees by one.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventResponseDto> registerForEvent(
+            @PathVariable String slug,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(eventService.registerForEvent(slug, currentUser));
+    }
+
+    @DeleteMapping("/{slug}/register")
+    @Operation(
+            summary = "Unregister current user from an event",
+            description = "Unregisters the authenticated user from the event and decrements attendees by one.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventResponseDto> unregisterFromEvent(
+            @PathVariable String slug,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(eventService.unregisterFromEvent(slug, currentUser));
     }
 
     @PostMapping

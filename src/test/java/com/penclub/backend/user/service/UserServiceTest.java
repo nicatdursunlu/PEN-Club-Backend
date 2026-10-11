@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,6 +28,42 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Test
+    void getAllUsersReturnsUserDtos() {
+        User admin = User.builder()
+                .id(UUID.randomUUID())
+                .firstName("Admin")
+                .lastName("User")
+                .email("admin@example.com")
+                .password("encoded-password")
+                .role(Role.ADMIN)
+                .enabled(true)
+                .build();
+        User member = User.builder()
+                .id(UUID.randomUUID())
+                .firstName("Nijat")
+                .lastName("Dursunlu")
+                .email("nijat.dursunlu@gmail.com")
+                .password("encoded-password")
+                .gender("male")
+                .phoneNumber("+994501234567")
+                .educationDegree("Bachelor")
+                .role(Role.MEMBER)
+                .enabled(true)
+                .build();
+
+        when(userRepository.findAll()).thenReturn(List.of(admin, member));
+
+        List<UserDto> response = userService.getAllUsers();
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).getEmail()).isEqualTo("admin@example.com");
+        assertThat(response.get(0).getRole()).isEqualTo("ADMIN");
+        assertThat(response.get(1).getEmail()).isEqualTo("nijat.dursunlu@gmail.com");
+        assertThat(response.get(1).getPhoneNumber()).isEqualTo("+994501234567");
+        assertThat(response.get(1).getRole()).isEqualTo("MEMBER");
+    }
 
     @Test
     void updateProfileUpdatesCurrentUserProfileFields() {

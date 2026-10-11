@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-event-participants
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: event_participants
+      changes:
+        - createTable:
+            tableName: event_participants
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_event_participants
+              - column:
+                  name: event_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: event_participants
+            columnNames: event_id,user_id
+            constraintName: uk_event_participants_event_user
+        - addForeignKeyConstraint:
+            baseTableName: event_participants
+            baseColumnNames: event_id
+            constraintName: fk_event_participants_event
+            referencedTableName: events
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: event_participants
+            baseColumnNames: user_id
+            constraintName: fk_event_participants_user
+            referencedTableName: users
+            referencedColumnNames: id
