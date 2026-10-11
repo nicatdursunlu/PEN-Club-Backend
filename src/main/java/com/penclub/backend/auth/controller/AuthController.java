@@ -5,8 +5,10 @@ import com.penclub.backend.auth.dto.LoginRequest;
 import com.penclub.backend.auth.dto.RefreshTokenRequest;
 import com.penclub.backend.auth.dto.RegisterRequest;
 import com.penclub.backend.auth.service.AuthService;
+import com.penclub.backend.user.dto.UpdateProfileRequest;
 import com.penclub.backend.user.dto.UserDto;
 import com.penclub.backend.user.entity.User;
+import com.penclub.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,13 +34,14 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     /**
      * POST /api/v1/auth/register
      */
     @Operation(
             summary = "Register a new user",
-            description = "Creates a new user account with MEMBER role and returns JWT access & refresh tokens."
+            description = "Creates a new standard user account with MEMBER role and returns JWT access & refresh tokens."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User registered successfully",
@@ -51,29 +53,6 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("Registration request received for email: {}", request.getEmail());
         AuthResponse response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
-     * POST /api/v1/auth/admin/register
-     */
-    @Operation(
-            summary = "Register a new admin user",
-            description = "Creates a new user account with ADMIN role. Requires an existing ADMIN Bearer token.",
-            security = @SecurityRequirement(name = "bearerAuth")
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Admin registered successfully",
-                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Access denied — ADMIN role required", content = @Content),
-            @ApiResponse(responseCode = "409", description = "Email already in use", content = @Content),
-            @ApiResponse(responseCode = "400", description = "Validation error (missing/invalid fields)", content = @Content)
-    })
-    @PostMapping("/admin/register")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
-        log.info("Admin registration request received for email: {}", request.getEmail());
-        AuthResponse response = authService.registerAdmin(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -135,7 +114,7 @@ public class AuthController {
     }
 
     /**
-     * GET /api/v1/auth/me
+     * GET /api/v1/auth/profile
      */
     @Operation(
             summary = "Get current user",
@@ -147,8 +126,30 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = UserDto.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized — missing or invalid Bearer token", content = @Content)
     })
-    @GetMapping("/me")
+    @GetMapping("/profile")
     public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(UserDto.fromEntity(currentUser));
+    }
+
+    /**
+     * PUT /api/v1/auth/profile
+     */
+    @Operation(
+            summary = "Update current user profile",
+            description = "Updates the authenticated user's profile fields. Requires a valid Bearer token.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User profile updated successfully",
+                    content = @Content(schema = @Schema(implementation = UserDto.class))),
+            @ApiResponse(responseCode = "400", description = "Validation error", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized — missing or invalid Bearer token", content = @Content)
+    })
+    @PutMapping("/profile")
+    public ResponseEntity<UserDto> updateCurrentUser(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody UpdateProfileRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateProfile(currentUser, request));
     }
 }

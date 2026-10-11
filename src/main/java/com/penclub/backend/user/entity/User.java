@@ -37,6 +37,15 @@ public class User implements UserDetails {
     @Column(name = "password", nullable = false)
     private String password;
 
+    @Column(name = "gender")
+    private String gender;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "education_degree")
+    private String educationDegree;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
