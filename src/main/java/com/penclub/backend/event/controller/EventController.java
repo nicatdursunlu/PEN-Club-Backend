@@ -27,27 +27,30 @@ public class EventController {
     private final EventService eventService;
 
     @GetMapping
-    @Operation(summary = "Get all events", description = "Retrieves a list of all events")
+    @Operation(summary = "Get published events", description = "Retrieves publicly visible published events")
     public ResponseEntity<List<EventSummaryDto>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 
     @GetMapping("/upcoming")
-    @Operation(summary = "Get upcoming events", description = "Retrieves events that have not yet ended, sorted by date ascending")
+    @Operation(summary = "Get upcoming events", description = "Retrieves published events that have not yet ended, sorted by date ascending")
     public ResponseEntity<List<EventSummaryDto>> getUpcomingEvents() {
         return ResponseEntity.ok(eventService.getUpcomingEvents());
     }
 
     @GetMapping("/past")
-    @Operation(summary = "Get past events", description = "Retrieves events that have already ended, sorted by date descending")
+    @Operation(summary = "Get past events", description = "Retrieves published events that have already ended, sorted by date descending")
     public ResponseEntity<List<EventSummaryDto>> getPastEvents() {
         return ResponseEntity.ok(eventService.getPastEvents());
     }
 
     @GetMapping("/{slug}")
-    @Operation(summary = "Get event by slug", description = "Retrieves an event by its unique slug")
-    public ResponseEntity<EventResponseDto> getEventBySlug(@PathVariable String slug) {
-        return ResponseEntity.ok(eventService.getEventBySlug(slug));
+    @Operation(summary = "Get event by slug", description = "Retrieves a published event by its unique slug")
+    public ResponseEntity<EventResponseDto> getEventBySlug(
+            @PathVariable String slug,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(eventService.getEventBySlug(slug, currentUser));
     }
 
     @GetMapping("/{slug}/participants")
@@ -99,6 +102,37 @@ public class EventController {
     public ResponseEntity<EventResponseDto> updateEvent(@PathVariable String slug, @RequestBody EventRequestDto request) {
         EventResponseDto updatedEvent = eventService.updateEvent(slug, request);
         return ResponseEntity.ok(updatedEvent);
+    }
+
+    @PostMapping("/{slug}/clone")
+    @Operation(
+            summary = "Clone an event",
+            description = "Creates a new draft event by copying an existing event without participants",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventResponseDto> cloneEvent(@PathVariable String slug) {
+        EventResponseDto clonedEvent = eventService.cloneEvent(slug);
+        return ResponseEntity.status(HttpStatus.CREATED).body(clonedEvent);
+    }
+
+    @PatchMapping("/{slug}/publish")
+    @Operation(
+            summary = "Publish an event",
+            description = "Changes an event status from draft to published so it becomes publicly visible",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventResponseDto> publishEvent(@PathVariable String slug) {
+        return ResponseEntity.ok(eventService.publishEvent(slug));
+    }
+
+    @PatchMapping("/{slug}/cancel")
+    @Operation(
+            summary = "Cancel an event",
+            description = "Changes an event status to cancelled so it is no longer publicly visible",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventResponseDto> cancelEvent(@PathVariable String slug) {
+        return ResponseEntity.ok(eventService.cancelEvent(slug));
     }
 
     @DeleteMapping("/{slug}")

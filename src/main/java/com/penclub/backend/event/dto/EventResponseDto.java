@@ -40,6 +40,7 @@ public class EventResponseDto {
     private List<Event.AgendaItem> agenda;
     private List<String> eventHighlights;
     private Event.Pricing pricing;
+    private boolean registered;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -47,6 +48,10 @@ public class EventResponseDto {
      * Static factory method to map an Event entity to EventResponseDto.
      */
     public static EventResponseDto fromEntity(Event event) {
+        return fromEntity(event, false);
+    }
+
+    public static EventResponseDto fromEntity(Event event, boolean registered) {
         return EventResponseDto.builder()
                 .id(event.getId())
                 .slug(event.getSlug())
@@ -69,6 +74,7 @@ public class EventResponseDto {
                 .agenda(event.getAgenda())
                 .eventHighlights(event.getEventHighlights())
                 .pricing(event.getPricing())
+                .registered(registered)
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .build();

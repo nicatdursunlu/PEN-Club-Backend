@@ -39,7 +39,7 @@ public class EventService {
     private final EventParticipantRepository eventParticipantRepository;
 
     public List<EventSummaryDto> getAllEvents() {
-        return eventRepository.findAll()
+        return eventRepository.findAllByStatus(EventStatus.PUBLISHED)
                 .stream()
                 .map(EventSummaryDto::fromEntity)
                 .toList();
@@ -47,7 +47,7 @@ public class EventService {
 
     public List<EventSummaryDto> getUpcomingEvents() {
         LocalDate today = LocalDate.now();
-        return eventRepository.findAll()
+        return eventRepository.findAllByStatus(EventStatus.PUBLISHED)
                 .stream()
                 .filter(event -> isUpcoming(event, today))
                 .sorted(Comparator.comparing(event -> resolveEndDateTime(event)))
@@ -57,7 +57,7 @@ public class EventService {
 
     public List<EventSummaryDto> getPastEvents() {
         LocalDate today = LocalDate.now();
-        return eventRepository.findAll()
+        return eventRepository.findAllByStatus(EventStatus.PUBLISHED)
                 .stream()
                 .filter(event -> !isUpcoming(event, today))
                 .sorted(Comparator.comparing((Event event) -> resolveEndDateTime(event)).reversed())
@@ -72,7 +72,7 @@ public class EventService {
      */
     private boolean isUpcoming(Event event, LocalDate today) {
         if (event.getDate() == null) {
-            return event.getStatus() == EventStatus.UPCOMING;
+            return event.getStatus() == EventStatus.PUBLISHED;
         }
         LocalDate eventDate = event.getDate();
         if (eventDate.isAfter(today)) {
@@ -112,9 +112,15 @@ public class EventService {
     }
 
     public EventResponseDto getEventBySlug(String slug) {
-        Event event = eventRepository.findBySlug(slug)
+        return getEventBySlug(slug, null);
+    }
+
+    public EventResponseDto getEventBySlug(String slug, User currentUser) {
+        Event event = eventRepository.findBySlugAndStatus(slug, EventStatus.PUBLISHED)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
-        return EventResponseDto.fromEntity(event);
+        boolean registered = currentUser != null
+                && eventParticipantRepository.existsByEventAndUserAndRegisteredTrue(event, currentUser);
+        return EventResponseDto.fromEntity(event, registered);
     }
 
     @Transactional(readOnly = true)
@@ -154,7 +160,7 @@ public class EventService {
         event.setAttendees(attendees + 1);
 
         log.info("User '{}' registered for event '{}'", currentUser.getEmail(), slug);
-        return EventResponseDto.fromEntity(eventRepository.save(event));
+        return EventResponseDto.fromEntity(eventRepository.save(event), true);
     }
 
     @Transactional
@@ -177,10 +183,16 @@ public class EventService {
         event.setAttendees(Math.max(0, attendees - 1));
 
         log.info("User '{}' unregistered from event '{}'", currentUser.getEmail(), slug);
-        return EventResponseDto.fromEntity(eventRepository.save(event));
+        return EventResponseDto.fromEntity(eventRepository.save(event), false);
     }
 
     private void validateEventIsUpcoming(Event event, String slug, String action) {
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            throw new IllegalArgumentException("Cannot " + action + " a past event: " + slug);
+        }
+        if (event.getStatus() != EventStatus.PUBLISHED) {
+            throw new IllegalArgumentException("Cannot " + action + " an unpublished event: " + slug);
+        }
         if (!isUpcoming(event, LocalDate.now())) {
             throw new IllegalArgumentException("Cannot " + action + " a past event: " + slug);
         }
@@ -200,7 +212,7 @@ public class EventService {
                 .time(request.getTime())
                 .location(request.getLocation())
                 .category(request.getCategory() != null ? request.getCategory() : EventCategory.ENJOY)
-                .status(request.getStatus() != null ? request.getStatus() : EventStatus.UPCOMING)
+                .status(request.getStatus() != null ? request.getStatus() : EventStatus.DRAFT)
                 .description(request.getDescription())
                 .fullDescription(request.getFullDescription())
                 .goal(request.getGoal())
@@ -249,6 +261,79 @@ public class EventService {
             throw new IllegalArgumentException("Event title must contain letters or numbers to generate slug");
         }
         return slug;
+    }
+
+    @Transactional
+    public EventResponseDto cloneEvent(String slug) {
+        Event sourceEvent = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        String title = sourceEvent.getTitle() + " Copy";
+        String clonedSlug = resolveUniqueSlug(slugify(title));
+
+        Event clonedEvent = Event.builder()
+                .slug(clonedSlug)
+                .title(title)
+                .date(sourceEvent.getDate())
+                .time(sourceEvent.getTime())
+                .location(sourceEvent.getLocation())
+                .category(sourceEvent.getCategory())
+                .status(EventStatus.DRAFT)
+                .description(sourceEvent.getDescription())
+                .fullDescription(sourceEvent.getFullDescription())
+                .goal(sourceEvent.getGoal())
+                .organizer(sourceEvent.getOrganizer())
+                .locationLink(sourceEvent.getLocationLink())
+                .mapEmbedUrl(sourceEvent.getMapEmbedUrl())
+                .specialNote(sourceEvent.getSpecialNote())
+                .attendees(0)
+                .highlights(sourceEvent.getHighlights())
+                .images(sourceEvent.getImages())
+                .agenda(sourceEvent.getAgenda())
+                .eventHighlights(sourceEvent.getEventHighlights())
+                .pricing(sourceEvent.getPricing())
+                .build();
+
+        return EventResponseDto.fromEntity(eventRepository.save(clonedEvent));
+    }
+
+    private String resolveUniqueSlug(String baseSlug) {
+        String slug = baseSlug;
+        int suffix = 2;
+        while (eventRepository.existsBySlug(slug)) {
+            slug = baseSlug + "-" + suffix;
+            suffix++;
+        }
+        return slug;
+    }
+
+    @Transactional
+    public EventResponseDto publishEvent(String slug) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        if (event.getStatus() == EventStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cannot publish a cancelled event: " + slug);
+        }
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            throw new IllegalArgumentException("Cannot publish a completed event: " + slug);
+        }
+
+        event.setStatus(EventStatus.PUBLISHED);
+        return EventResponseDto.fromEntity(eventRepository.save(event));
+    }
+
+    @Transactional
+    public EventResponseDto cancelEvent(String slug) {
+        Event event = eventRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
+
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            throw new IllegalArgumentException("Cannot cancel a completed event: " + slug);
+        }
+
+        event.setStatus(EventStatus.CANCELLED);
+        return EventResponseDto.fromEntity(eventRepository.save(event));
     }
 
     @Transactional
