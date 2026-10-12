@@ -3,6 +3,7 @@ package com.penclub.backend.auth.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.penclub.backend.auth.dto.AuthResponse;
 import com.penclub.backend.auth.dto.LoginRequest;
+import com.penclub.backend.auth.dto.RefreshTokenRequest;
 import com.penclub.backend.auth.dto.RegisterRequest;
 import com.penclub.backend.auth.service.AuthService;
 import com.penclub.backend.user.service.UserService;
@@ -18,7 +19,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,6 +84,23 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.role").value("MEMBER"));
+    }
+
+    @Test
+    void refreshTokenEndpointAcceptsCamelCaseRefreshToken() throws Exception {
+        when(authService.refreshToken(any(RefreshTokenRequest.class))).thenReturn(authResponse());
+
+        mockMvc.perform(post("/auth/refresh-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"refresh-token\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"));
+
+        org.mockito.ArgumentCaptor<RefreshTokenRequest> requestCaptor =
+                org.mockito.ArgumentCaptor.forClass(RefreshTokenRequest.class);
+        verify(authService).refreshToken(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getRefreshToken()).isEqualTo("refresh-token");
     }
 
     @Test

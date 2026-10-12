@@ -1,16 +1,20 @@
 package com.penclub.backend.event.controller;
 
+import com.penclub.backend.event.dto.EventFeedbackDto;
+import com.penclub.backend.event.dto.EventFeedbackRequestDto;
 import com.penclub.backend.event.dto.EventRequestDto;
 import com.penclub.backend.event.dto.EventParticipantDto;
 import com.penclub.backend.event.dto.EventResponseDto;
 import com.penclub.backend.event.dto.EventSummaryDto;
 import com.penclub.backend.event.entity.EventCategory;
 import com.penclub.backend.event.entity.EventStatus;
+import com.penclub.backend.event.service.EventFeedbackService;
 import com.penclub.backend.event.service.EventService;
 import com.penclub.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +34,7 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
+    private final EventFeedbackService eventFeedbackService;
 
     @GetMapping
     @Operation(summary = "Get published events", description = "Retrieves publicly visible published events")
@@ -88,6 +93,15 @@ public class EventController {
         return ResponseEntity.ok(eventService.getEventParticipants(slug));
     }
 
+    @GetMapping("/{slug}/feedback")
+    @Operation(
+            summary = "Get event feedback",
+            description = "Returns participant feedback for an event."
+    )
+    public ResponseEntity<List<EventFeedbackDto>> getEventFeedback(@PathVariable String slug) {
+        return ResponseEntity.ok(eventFeedbackService.getEventFeedback(slug));
+    }
+
     @PostMapping("/{slug}/register")
     @Operation(
             summary = "Register current user for an event",
@@ -112,6 +126,20 @@ public class EventController {
             @AuthenticationPrincipal User currentUser
     ) {
         return ResponseEntity.ok(eventService.unregisterFromEvent(slug, currentUser));
+    }
+
+    @PostMapping("/{slug}/feedback")
+    @Operation(
+            summary = "Submit event feedback",
+            description = "Submits or updates the authenticated participant's rating and optional comment after an event.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<EventFeedbackDto> submitEventFeedback(
+            @PathVariable String slug,
+            @Valid @RequestBody EventFeedbackRequestDto request,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(eventFeedbackService.submitFeedback(slug, request, currentUser));
     }
 
     @PostMapping

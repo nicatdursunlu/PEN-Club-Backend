@@ -78,7 +78,7 @@ public class EventService {
 
     public List<EventSummaryDto> getPastEvents() {
         LocalDate today = LocalDate.now();
-        return eventRepository.findAllByStatus(EventStatus.PUBLISHED)
+        return eventRepository.findAllByStatusIn(List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED))
                 .stream()
                 .filter(event -> !isUpcoming(event, today))
                 .sorted(Comparator.comparing((Event event) -> resolveEndDateTime(event)).reversed())

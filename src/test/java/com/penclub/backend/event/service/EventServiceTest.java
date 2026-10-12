@@ -178,6 +178,31 @@ class EventServiceTest {
     }
 
     @Test
+    void getPastEventsReturnsPastPublishedAndCompletedEvents() {
+        Event pastPublishedEvent = Event.builder()
+                .slug("past-published-event")
+                .title("Past Published Event")
+                .date(LocalDate.now().minusDays(2))
+                .time("3:00 PM - 5:00 PM")
+                .status(EventStatus.PUBLISHED)
+                .build();
+        Event completedEvent = Event.builder()
+                .slug("completed-event")
+                .title("Completed Event")
+                .date(LocalDate.now().minusDays(1))
+                .time("3:00 PM - 5:00 PM")
+                .status(EventStatus.COMPLETED)
+                .build();
+
+        when(eventRepository.findAllByStatusIn(List.of(EventStatus.PUBLISHED, EventStatus.COMPLETED)))
+                .thenReturn(List.of(pastPublishedEvent, completedEvent));
+
+        assertThat(eventService.getPastEvents())
+                .extracting("id")
+                .containsExactly("completed-event", "past-published-event");
+    }
+
+    @Test
     void getAllEventsForAdminReturnsEventsInAllStatuses() {
         Event draftEvent = Event.builder()
                 .slug("draft-event")
