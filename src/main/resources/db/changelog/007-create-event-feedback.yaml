@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-create-event-feedback
+      author: codex
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          tableExists:
+            tableName: event_feedback
+      changes:
+        - createTable:
+            tableName: event_feedback
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_event_feedback
+              - column:
+                  name: event_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rating
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comment
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addUniqueConstraint:
+            tableName: event_feedback
+            columnNames: event_id,user_id
+            constraintName: uk_event_feedback_event_user
+        - addForeignKeyConstraint:
+            baseTableName: event_feedback
+            baseColumnNames: event_id
+            constraintName: fk_event_feedback_event
+            referencedTableName: events
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: event_feedback
+            baseColumnNames: user_id
+            constraintName: fk_event_feedback_user
+            referencedTableName: users
+            referencedColumnNames: id

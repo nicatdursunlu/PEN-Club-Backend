@@ -67,7 +67,7 @@ public class Event {
 
     @Column(name = "special_note", columnDefinition = "TEXT")
     private String specialNote;
-
+    
     @Column(name = "attendees")
     private Integer attendees;
 

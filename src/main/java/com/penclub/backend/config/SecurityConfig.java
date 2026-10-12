@@ -58,6 +58,8 @@ public class SecurityConfig {
                 // Configure authorization rules
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Event participants: ADMIN only
+                        .requestMatchers(HttpMethod.GET, "/events/*/participants").hasRole("ADMIN")
                         // Events: GET endpoints are public, write operations require authentication
                         .requestMatchers(HttpMethod.GET, "/events/**").permitAll()
                         // Dashboard: ADMIN only
