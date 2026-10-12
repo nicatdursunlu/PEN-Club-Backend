@@ -4,12 +4,17 @@ import com.penclub.backend.event.dto.EventRequestDto;
 import com.penclub.backend.event.dto.EventParticipantDto;
 import com.penclub.backend.event.dto.EventResponseDto;
 import com.penclub.backend.event.dto.EventSummaryDto;
+import com.penclub.backend.event.entity.EventCategory;
+import com.penclub.backend.event.entity.EventStatus;
 import com.penclub.backend.event.service.EventService;
 import com.penclub.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +47,25 @@ public class EventController {
     @Operation(summary = "Get past events", description = "Retrieves published events that have already ended, sorted by date descending")
     public ResponseEntity<List<EventSummaryDto>> getPastEvents() {
         return ResponseEntity.ok(eventService.getPastEvents());
+    }
+
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Get all events for admin",
+            description = "Retrieves paginated events for management, optionally filtered by status and category. Requires ADMIN role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<Page<EventResponseDto>> getAllEventsForAdmin(
+            @RequestParam(required = false) EventStatus status,
+            @RequestParam(required = false) EventCategory category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        int resolvedPage = Math.max(page, 0);
+        int resolvedSize = Math.min(Math.max(size, 1), 100);
+        PageRequest pageable = PageRequest.of(resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(eventService.getAllEventsForAdmin(status, category, pageable));
     }
 
     @GetMapping("/{slug}")

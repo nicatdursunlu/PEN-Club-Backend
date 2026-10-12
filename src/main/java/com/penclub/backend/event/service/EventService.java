@@ -15,6 +15,8 @@ import com.penclub.backend.exception.ResourceNotFoundException;
 import com.penclub.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +45,25 @@ public class EventService {
                 .stream()
                 .map(EventSummaryDto::fromEntity)
                 .toList();
+    }
+
+    public Page<EventResponseDto> getAllEventsForAdmin(
+            EventStatus status,
+            EventCategory category,
+            Pageable pageable
+    ) {
+        Page<Event> events;
+        if (status != null && category != null) {
+            events = eventRepository.findAllByStatusAndCategory(status, category, pageable);
+        } else if (status != null) {
+            events = eventRepository.findAllByStatus(status, pageable);
+        } else if (category != null) {
+            events = eventRepository.findAllByCategory(category, pageable);
+        } else {
+            events = eventRepository.findAll(pageable);
+        }
+
+        return events.map(EventResponseDto::fromEntity);
     }
 
     public List<EventSummaryDto> getUpcomingEvents() {
@@ -116,7 +137,10 @@ public class EventService {
     }
 
     public EventResponseDto getEventBySlug(String slug, User currentUser) {
-        Event event = eventRepository.findBySlugAndStatus(slug, EventStatus.PUBLISHED)
+        Event event = currentUser == null
+                ? eventRepository.findBySlugAndStatus(slug, EventStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug))
+                : eventRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with slug: " + slug));
         boolean registered = currentUser != null
                 && eventParticipantRepository.existsByEventAndUserAndRegisteredTrue(event, currentUser);

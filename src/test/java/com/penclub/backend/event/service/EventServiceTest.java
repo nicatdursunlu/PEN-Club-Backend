@@ -4,6 +4,7 @@ import com.penclub.backend.event.dto.EventRequestDto;
 import com.penclub.backend.event.dto.EventResponseDto;
 import com.penclub.backend.event.dto.EventParticipantDto;
 import com.penclub.backend.event.entity.Event;
+import com.penclub.backend.event.entity.EventCategory;
 import com.penclub.backend.event.entity.EventParticipant;
 import com.penclub.backend.event.entity.EventStatus;
 import com.penclub.backend.event.repository.EventParticipantRepository;
@@ -14,6 +15,8 @@ import com.penclub.backend.user.entity.Role;
 import com.penclub.backend.user.entity.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -175,6 +178,94 @@ class EventServiceTest {
     }
 
     @Test
+    void getAllEventsForAdminReturnsEventsInAllStatuses() {
+        Event draftEvent = Event.builder()
+                .slug("draft-event")
+                .title("Draft Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.DRAFT)
+                .createdAt(LocalDateTime.of(2026, 10, 10, 10, 0))
+                .build();
+        Event publishedEvent = Event.builder()
+                .slug("published-event")
+                .title("Published Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.PUBLISHED)
+                .createdAt(LocalDateTime.of(2026, 10, 11, 10, 0))
+                .build();
+        Event cancelledEvent = Event.builder()
+                .slug("cancelled-event")
+                .title("Cancelled Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.CANCELLED)
+                .createdAt(LocalDateTime.of(2026, 10, 9, 10, 0))
+                .build();
+
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(eventRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(publishedEvent, draftEvent, cancelledEvent), pageable, 3));
+
+        assertThat(eventService.getAllEventsForAdmin(null, null, pageable).getContent())
+                .extracting(EventResponseDto::getSlug)
+                .containsExactly("published-event", "draft-event", "cancelled-event");
+    }
+
+    @Test
+    void getAllEventsForAdminFiltersByStatusAndCategory() {
+        Event event = Event.builder()
+                .slug("draft-play-event")
+                .title("Draft Play Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.DRAFT)
+                .category(EventCategory.PLAY)
+                .build();
+
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(eventRepository.findAllByStatusAndCategory(EventStatus.DRAFT, EventCategory.PLAY, pageable))
+                .thenReturn(new PageImpl<>(List.of(event), pageable, 1));
+
+        assertThat(eventService.getAllEventsForAdmin(EventStatus.DRAFT, EventCategory.PLAY, pageable).getContent())
+                .extracting(EventResponseDto::getSlug)
+                .containsExactly("draft-play-event");
+    }
+
+    @Test
+    void getAllEventsForAdminFiltersByStatusOnly() {
+        Event event = Event.builder()
+                .slug("draft-event")
+                .title("Draft Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.DRAFT)
+                .build();
+
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(eventRepository.findAllByStatus(EventStatus.DRAFT, pageable))
+                .thenReturn(new PageImpl<>(List.of(event), pageable, 1));
+
+        assertThat(eventService.getAllEventsForAdmin(EventStatus.DRAFT, null, pageable).getContent())
+                .extracting(EventResponseDto::getSlug)
+                .containsExactly("draft-event");
+    }
+
+    @Test
+    void getAllEventsForAdminFiltersByCategoryOnly() {
+        Event event = Event.builder()
+                .slug("play-event")
+                .title("Play Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .category(EventCategory.PLAY)
+                .build();
+
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(eventRepository.findAllByCategory(EventCategory.PLAY, pageable))
+                .thenReturn(new PageImpl<>(List.of(event), pageable, 1));
+
+        assertThat(eventService.getAllEventsForAdmin(null, EventCategory.PLAY, pageable).getContent())
+                .extracting(EventResponseDto::getSlug)
+                .containsExactly("play-event");
+    }
+
+    @Test
     void getEventBySlugRequiresPublishedEvent() {
         Event publishedEvent = Event.builder()
                 .slug("published-event")
@@ -201,8 +292,7 @@ class EventServiceTest {
                 .build();
         User user = memberUser();
 
-        when(eventRepository.findBySlugAndStatus("published-event", EventStatus.PUBLISHED))
-                .thenReturn(Optional.of(publishedEvent));
+        when(eventRepository.findBySlug("published-event")).thenReturn(Optional.of(publishedEvent));
         when(eventParticipantRepository.existsByEventAndUserAndRegisteredTrue(publishedEvent, user)).thenReturn(true);
 
         EventResponseDto response = eventService.getEventBySlug("published-event", user);
@@ -224,6 +314,26 @@ class EventServiceTest {
 
         EventResponseDto response = eventService.getEventBySlug("published-event", null);
 
+        assertThat(response.isRegistered()).isFalse();
+    }
+
+    @Test
+    void getEventBySlugReturnsDraftEventForAuthenticatedUser() {
+        Event draftEvent = Event.builder()
+                .slug("draft-event")
+                .title("Draft Event")
+                .date(LocalDate.of(2026, 12, 31))
+                .status(EventStatus.DRAFT)
+                .build();
+        User user = memberUser();
+
+        when(eventRepository.findBySlug("draft-event")).thenReturn(Optional.of(draftEvent));
+        when(eventParticipantRepository.existsByEventAndUserAndRegisteredTrue(draftEvent, user)).thenReturn(false);
+
+        EventResponseDto response = eventService.getEventBySlug("draft-event", user);
+
+        assertThat(response.getSlug()).isEqualTo("draft-event");
+        assertThat(response.getStatus()).isEqualTo(EventStatus.DRAFT);
         assertThat(response.isRegistered()).isFalse();
     }
 
