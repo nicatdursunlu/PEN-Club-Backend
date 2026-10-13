@@ -9,3 +9,7 @@ databaseChangeLog:
       file: db/changelog/004-create-event-participants.yaml
   - include:
       file: db/changelog/005-add-event-participant-soft-delete-fields.yaml
+  - include:
+      file: db/changelog/006-update-event-status-workflow.yaml
+  - include:
+      file: db/changelog/007-create-event-feedback.yaml

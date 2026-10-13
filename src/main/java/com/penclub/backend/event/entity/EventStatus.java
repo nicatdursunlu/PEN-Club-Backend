@@ -1,6 +1,8 @@
 package com.penclub.backend.event.entity;
 
 public enum EventStatus {
-    UPCOMING,
+    DRAFT,
+    PUBLISHED,
+    CANCELLED,
     COMPLETED
 }

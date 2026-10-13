@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -60,6 +61,26 @@ public class GlobalExceptionHandler {
             );
         }
         log.warn("Invalid request body: {}", message);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", message);
+    }
+
+    // --- Invalid Query Parameters (e.g. invalid enum value) ---
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message = "Invalid query parameter";
+        Class<?> requiredType = ex.getRequiredType();
+        if (requiredType != null && requiredType.isEnum()) {
+            String validValues = Arrays.stream(requiredType.getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            message = String.format(
+                    "Invalid value '%s' for parameter '%s'. Accepted values are: [%s]",
+                    ex.getValue(),
+                    ex.getName(),
+                    validValues
+            );
+        }
+        log.warn("Invalid query parameter: {}", message);
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Bad Request", message);
     }
 
